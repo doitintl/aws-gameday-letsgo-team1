@@ -1,0 +1,15 @@
+[
+	{
+		"ParameterKey": "VpcSubnetIds",
+		"ParameterValue": "subnet-xyz,subnet-abc"
+	},
+	{
+		"ParameterKey": "VpcSecurityGroupIds",
+		"ParameterValue": "sg-xyz,sg-abc"
+	},
+	{
+		"ParameterKey": "CreateInstance",
+		"ParameterValue": "FALSE"
+	}
+]
+

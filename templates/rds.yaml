@@ -1,0 +1,117 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Template for creating the AWS DMS to Hudi Infrastructure and Pipeline
+
+Parameters:
+  VpcSubnetIds:
+    Type: String
+    Description: >
+      Comma separated list of two existing private subnets this stack will run in.
+
+  VpcSecurityGroupIds:
+    Type: String
+    Description: >
+      Comma separated list of two existing security group ids to attach to the aurora cluster
+
+  DatabaseSecret:
+    Type: String
+    Default: gameday/targetdb/admin
+    Description: >
+      The AWS Secrets Manager secret that contains the database info, the following properties are expected:
+        {
+          "username": "<username>",
+          "password": "<password>",
+          "engine": "<mysql | oracle | postgres | mariadb | aurora | aurora-postgresql | sqlserver>",
+          "host": "<db hostname>",
+          "port": <db port>,
+          "dbname": "<db name>"
+        }
+
+  DatabaseSecretSecret:
+    Type: String
+    Default: gameday/targetdb/admin
+    Description: >
+      The AWS Secrets Manager secret that contains the database info, the following properties are expected:
+        {
+          "username": "<username>",
+          "password": "<password>",
+          "engine": "<mysql | oracle | postgres | mariadb | aurora | aurora-postgresql | sqlserver>",
+          "host": "<db hostname>",
+          "port": <db port>,
+          "dbname": "<db name>"
+        }
+
+  ReplicationInstanceStorage:
+    Type: Number
+    Description: The size (in GB) of the replication instance local storage
+    Default: 200
+
+  DbClusterParameterGroup:
+    Type: String
+    Default: default.aurora-mysql5.7
+    Description: The DB Cluster Parameter group
+
+  CreateInstance:
+    Type: String
+    Description: Whether to create the db instance
+    AllowedValues: [ 'TRUE', 'FALSE' ]
+    Default: 'FALSE'
+
+Conditions:
+  CreateInstance: !Equals [ !Ref CreateInstance, 'TRUE' ]
+
+Resources:
+  AuroraSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Aurora Subnet Group
+      SubnetIds:
+        - !Select [ 0, !Split [ ',', !Ref VpcSubnetIds ] ]
+        - !Select [ 1, !Split [ ',', !Ref VpcSubnetIds ] ]
+
+  AuroraClusterParameterGroup:
+    Type: AWS::RDS::DBClusterParameterGroup
+    Properties:
+      Description: String
+      Family: aurora-mysql5.7
+      Parameters: >
+        {
+          "binlog_format": "ROW",
+          "binlog_checksum": "NONE",
+          "binlog_row_image": "FULL",
+          "log_slave_updates": "TRUE",
+          "local_infile": 1
+        }
+
+  AuroraDbCluster:
+    Type: AWS::RDS::DBCluster
+    Properties:
+      AssociatedRoles:
+        - DBClusterRole
+      BackupRetentionPeriod: !Ref AWS::NoValue
+      CopyTagsToSnapshot: !Ref AWS::NoValue
+      DatabaseName: !Sub '{{resolve:secretsmanager:${DatabaseSecret}:SecretString:dbname}}'
+      DBClusterIdentifier: !Ref AWS::NoValue
+      DBClusterParameterGroupName: !Ref AuroraClusterParameterGroup
+      DBSubnetGroupName: !Ref AuroraSubnetGroup
+      DeletionProtection: TRUE
+      EnableCloudwatchLogsExports: [ 'audit', 'error', 'general', 'slowquery' ]
+      EnableIAMDatabaseAuthentication: !Ref AWS::NoValue
+      Engine: aurora-mysql
+      EngineMode: provisioned
+      EngineVersion: 5.7.mysql_aurora.2.10.2
+      KmsKeyId: String
+      MasterUsername: !Sub '{{resolve:secretsmanager:${DatabaseSecret}:SecretString:username}}'
+      MasterUserPassword: !Sub '{{resolve:secretsmanager:${DatabaseSecret}:SecretString:password}}'
+      Port: !Ref AWS::NoValue
+      PreferredBackupWindow: !Ref AWS::NoValue
+      PreferredMaintenanceWindow: !Ref AWS::NoValue
+      ReplicationSourceIdentifier: !Ref AWS::NoValue
+      ScalingConfiguration:
+        ScalingConfiguration
+      StorageEncrypted: TRUE
+      VpcSecurityGroupIds:
+        - !Select [ 0, !Split [ ',', !Ref VpcSecurityGroupIds ] ]
+        - !Select [ 1, !Split [ ',', !Ref VpcSecurityGroupIds ] ]
+

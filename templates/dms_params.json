@@ -1,0 +1,11 @@
+[
+	{
+		"ParameterKey": "VpcSubnetIds",
+		"ParameterValue": ""
+	},
+	{
+		"ParameterKey": "CreateReplicationTask",
+		"ParameterValue": "FALSE"
+	}
+]
+
